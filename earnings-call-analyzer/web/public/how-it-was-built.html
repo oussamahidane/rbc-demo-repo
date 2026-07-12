@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'" />
+  <title>How it was built · Earnings-Call Analyzer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>📊</text></svg>" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">▮▮</span>
+        <div>
+          <h1>Earnings-Call Analyzer</h1>
+          <p class="tagline">Grounded, self-citing analysis with an evaluation-first design</p>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Main">
+        <a href="/">Analyzer</a>
+        <a href="/how-it-works">How it works</a>
+        <a href="/how-it-was-built" class="active">How it was built</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap page prose">
+    <h2>How it was built</h2>
+    <p class="lede">
+      This tool was built with AI at every step, deliberately, and the process is part of the
+      demonstration. The interesting part is not that AI wrote code. It is the system that
+      kept multiple AI sessions coordinated, evaluated, and honest.
+    </p>
+
+    <h3>The build, step by step</h3>
+    <ol class="timeline">
+      <li>
+        <strong>Strategy before code.</strong> Everything started in a single AI chat session
+        with no files and no code: reading the role deeply, identifying that evaluation
+        methodology for LLMs was the differentiator almost no candidate would demonstrate, and
+        designing this tool around that opening. The AI pressure-tested the plan; the
+        decisions were human.
+      </li>
+      <li>
+        <strong>An expensive lesson, turned into architecture.</strong> Working over a
+        pay-per-token API, one simple prompt inside an old chat session cost over five
+        dollars, because months of accumulated history rode along silently as context. Bloated
+        context does not just burn money; it degrades output quality. The fix became a
+        discipline: state lives in markdown files, not in conversations. Every work session
+        starts from zero chat history and loads only the files it needs. This is context
+        engineering, practiced rather than claimed.
+      </li>
+      <li>
+        <strong>Parallel AI sessions, coordinated through files.</strong> With state in files,
+        multiple sessions ran at once: one on application documents, one on this build. Each
+        session read the shared state files, did its work, and logged results back. When one
+        session locked a decision, the others picked it up from the files. No session ever
+        needed another session's chat history.
+      </li>
+      <li>
+        <strong>An eval-first build.</strong> The build session wrote itself a standing brief
+        with a definition of done and guardrails, then executed it in a loop. The pipeline was
+        designed backwards from its evaluation: a golden set of synthetic transcripts with
+        known ground truth, a grounding checker that re-verifies every figure, and a scorecard
+        that must pass before anything ships. It also runs fully offline in a deterministic
+        mode, so the evals are reproducible and free.
+      </li>
+      <li>
+        <strong>Port and parity.</strong> The engine was built and evaluated in Python, then
+        ported to TypeScript for Cloudflare's edge runtime. A parity test suite runs the same
+        golden set through the port and requires identical results, so the reference and the
+        deployment cannot drift apart silently.
+      </li>
+      <li>
+        <strong>Deployment like it goes to production.</strong> Git push to GitHub,
+        auto-deploy to Cloudflare Pages, API on the Workers runtime at the same origin.
+        Secrets encrypted server-side and never in the client bundle. Password gate on UI and
+        API. A per-IP weekly spend cap enforced through Cloudflare KV. A custom domain. And a
+        stated governance posture: in production this runs on approved infrastructure with
+        data governance and model-risk review.
+      </li>
+    </ol>
+
+    <h3>What was human and what was AI</h3>
+    <p>
+      The strategy, the positioning, the guardrails (no novelty claims, synthetic golden set,
+      no third-party trademarks), and every accept-or-reject decision on AI output: human. The
+      drafting, the code, the port, the tests, and the documentation: AI, working inside the
+      file-based system above, with every session's work logged.
+    </p>
+    <p>
+      That division of labor is the point being demonstrated. The valuable skill is not using
+      AI. It is directing AI toward institutional-quality output and proving the output
+      deserves trust.
+    </p>
+
+    <h3>Reproduce it yourself</h3>
+    <p>
+      The repository includes a master prompt that recreates the entire tool from scratch in
+      an empty directory, plus the full methodology notes and build log. Documentation, best
+      practices, and shared resources, delivered as executable artifacts:
+    </p>
+    <ul>
+      <li><a href="https://github.com/oussamahidane/rbc-demo-repo" rel="noopener">The full repository on GitHub</a></li>
+      <li>In the repo: <code>earnings-call-analyzer/MASTER-PROMPT.md</code> rebuilds the tool from one prompt</li>
+      <li>In the repo: <code>WHAT-THIS-PROJECT-DEMONSTRATES.md</code> is the long-form version of this page</li>
+    </ul>
+    <p class="closing">
+      Everything on this page is offered as hypotheses for correction, not verdicts. Where it
+      falls short, that is useful signal too.
+    </p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Independent demonstration built by Oussama Hidane. Not affiliated with, or endorsed by, RBC.</p>
+      <p class="fine">In production this would run on approved infrastructure with data governance and
+        model-risk review. The personal API key is demo-only.</p>
+    </div>
+  </footer>
+</body>
+</html>

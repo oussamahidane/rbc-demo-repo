@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'" />
+  <title>How it works · Earnings-Call Analyzer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>📊</text></svg>" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">▮▮</span>
+        <div>
+          <h1>Earnings-Call Analyzer</h1>
+          <p class="tagline">Grounded, self-citing analysis with an evaluation-first design</p>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Main">
+        <a href="/">Analyzer</a>
+        <a href="/how-it-works" class="active">How it works</a>
+        <a href="/how-it-was-built">How it was built</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap page prose">
+    <h2>How it works</h2>
+    <p class="lede">
+      Paste a transcript, get an institutional-grade report. In between sits a five-stage
+      engine. Claude is <strong>one</strong> of those stages. The other four are deterministic
+      code, and they are what makes the output trustworthy enough for an investment desk.
+    </p>
+
+    <h3>The pipeline</h3>
+    <ol class="stages">
+      <li class="stage">
+        <span class="stage-badge badge-code">code</span>
+        <div>
+          <strong>Ingest.</strong> The raw file is normalized into clean text and every line
+          gets a stable number: [L1], [L2], [L3]. Nothing analytical happens here. Those line
+          numbers become the audit trail for everything downstream.
+        </div>
+      </li>
+      <li class="stage">
+        <span class="stage-badge badge-code">code</span>
+        <div>
+          <strong>Prompt construction.</strong> The engine builds a strict instruction set
+          around the numbered transcript: return JSON in an exact schema, cite the line number
+          for every claim, copy figures verbatim from the cited line, and if a claim cannot be
+          cited, omit it entirely. The model is never asked for an open-ended essay.
+        </div>
+      </li>
+      <li class="stage">
+        <span class="stage-badge badge-model">claude</span>
+        <div>
+          <strong>Analysis.</strong> The only AI stage. Claude reads the numbered transcript
+          and returns structured, cited claims: metrics, guidance, tone, risks, quotes. The
+          call happens server-side; the API key never reaches your browser.
+        </div>
+      </li>
+      <li class="stage">
+        <span class="stage-badge badge-code">code</span>
+        <div>
+          <strong>Grounding verification.</strong> The engine independently re-checks the
+          model's output: does every citation point to a real line, and does every financial
+          figure in a claim actually appear on its cited line? Anything that fails is flagged
+          on the report in a Grounding Flags section. Flagged, never hidden.
+        </div>
+      </li>
+      <li class="stage">
+        <span class="stage-badge badge-code">code</span>
+        <div>
+          <strong>Report rendering.</strong> The verified analysis is rendered into a fixed
+          house style defined in a single design-system file, so every report has the same
+          structure, tone rules, and citation format.
+        </div>
+      </li>
+    </ol>
+
+    <h3>Why not just send the file to Claude?</h3>
+    <p>
+      A thin wrapper would produce fluent, confident text with no way to audit it. On an
+      investment desk, one hallucinated figure kills adoption of the whole tool. So the design
+      never asks anyone to trust the model on numbers: the model must show its sources, and
+      plain code re-verifies every figure against those sources after the fact. Trust is
+      structural, not promised.
+    </p>
+
+    <h3>Where the sentiment analysis lives</h3>
+    <p>The tool has two backends, and the tone read works differently in each:</p>
+    <ul>
+      <li>
+        <strong>Sample mode</strong> (no API key, used for offline demos): a
+        Loughran-McDonald-style lexicon runs in code, counting finance-specific positive and
+        negative terms line by line. Loughran and McDonald (2011) showed that general-purpose
+        sentiment dictionaries misclassify financial text, since words like "liability" read
+        negative in everyday English but neutral in filings. Finance-specific word lists are
+        the classic fix.
+      </li>
+      <li>
+        <strong>Live mode</strong> (Claude): the model performs the tone read, but the prompt
+        constrains it. Tone claims must cite transcript lines and are framed as a baseline
+        signal, never a verdict. The FinBERT line of research is why a contextual model is
+        trusted over raw word counts: it handles negation and context ("not weak") that
+        dictionary methods miss.
+      </li>
+    </ul>
+    <p>
+      Either way, none of this is presented as novel. Lexicon and transformer-based sentiment
+      are the established baseline in the literature, cited in the methodology document in the
+      repository. The edge of this tool is not the sentiment method. It is that the output is
+      grounded, evaluated, and reproducible.
+    </p>
+
+    <h3>Python engine, TypeScript edge</h3>
+    <p>
+      The engine was built and evaluated first as a Python package: that version remains the
+      reference implementation and carries the evaluation harness. This web app runs a
+      TypeScript port of the same pipeline on Cloudflare's edge runtime. A parity test suite
+      runs the identical golden set through the ported pipeline and requires identical
+      results, so the two implementations cannot silently drift apart.
+    </p>
+
+    <h3>How we know it works: the evaluation harness</h3>
+    <p>
+      The pipeline is scored against a golden set of synthetic transcripts with known ground
+      truth (synthetic on purpose: an answer key requires knowing the right answers, and it
+      avoids reproducing copyrighted transcripts). The scorecard measures four things:
+    </p>
+    <ul>
+      <li><strong>Extraction accuracy.</strong> Were the expected metrics surfaced?</li>
+      <li><strong>Grounding coverage.</strong> Is every claim cited?</li>
+      <li><strong>Numeric verification.</strong> Does every figure appear on its cited line?</li>
+      <li><strong>Consistency.</strong> Do repeated runs agree with each other?</li>
+    </ul>
+    <p>
+      The committed pipeline passes at 100 percent on all four. Evaluation is not an
+      afterthought here; the tool was designed backwards from it.
+    </p>
+
+    <h3>Access, cost, and data handling</h3>
+    <ul>
+      <li>The whole site sits behind a password gate, UI and API both.</li>
+      <li>Each visitor has a weekly analysis budget, enforced per IP, to keep demo costs bounded.</li>
+      <li>Transcripts are analyzed in-request and are not stored or logged.</li>
+      <li>This is a demonstration environment. Do not paste confidential or material non-public information.</li>
+    </ul>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Independent demonstration built by Oussama Hidane. Not affiliated with, or endorsed by, RBC.</p>
+      <p class="fine">In production this would run on approved infrastructure with data governance and
+        model-risk review. The personal API key is demo-only.</p>
+    </div>
+  </footer>
+</body>
+</html>
