@@ -213,20 +213,29 @@ function clip(text: string, limit = 220): string {
 
 async function analyzeClaude(t: Transcript, companyHint: string, quarterHint: string, apiKey: string, model: string): Promise<Analysis> {
   const user = buildUserPrompt(companyHint, quarterHint, numberedMarkdown(t));
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4000,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: user }],
-    }),
-  });
+  const call = () =>
+    fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: user }],
+      }),
+    });
+
+  let resp = await call();
+  // One retry on transient upstream trouble (rate limit / overloaded / 5xx) so a single
+  // blip does not surface as a failed demo request.
+  if (resp.status === 429 || resp.status >= 500) {
+    await new Promise((r) => setTimeout(r, 2000));
+    resp = await call();
+  }
   if (!resp.ok) {
     const detail = await resp.text().catch(() => "");
     throw new Error(`Anthropic API error ${resp.status}: ${detail.slice(0, 300)}`);
