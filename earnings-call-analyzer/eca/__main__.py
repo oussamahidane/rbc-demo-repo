@@ -1,4 +1,4 @@
-"""CLI: `python -m eca analyze <transcript>` and `python -m eca eval`."""
+"""CLI: `python -m eca analyze <transcript>`, `python -m eca convert <file>`, `python -m eca eval`."""
 
 from __future__ import annotations
 
@@ -52,6 +52,20 @@ def cmd_analyze(args) -> int:
     return 0
 
 
+def cmd_convert(args) -> int:
+    from .convert import convert_to_markdown, truncate
+    text, truncated = truncate(convert_to_markdown(args.file), args.max_chars)
+    out_path = Path(args.out) if args.out else Path(args.file).with_suffix(".md")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(text, encoding="utf-8")
+    if truncated:
+        print(f"warning: output truncated to {args.max_chars:,} characters "
+              f"(the web UI transcript limit); pass --max-chars 0 to keep everything.",
+              file=sys.stderr)
+    print(f"Wrote {out_path} ({len(text):,} chars)")
+    return 0
+
+
 def cmd_eval(args) -> int:
     from .evaluate import run_eval
     backend = _backend(args)
@@ -72,11 +86,18 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
 
     a = sub.add_parser("analyze", help="Analyze one transcript into a report.")
-    a.add_argument("transcript", help="Path to .txt/.md/.pdf transcript.")
+    a.add_argument("transcript", help="Path to .txt/.md/.pdf/.docx/.pptx transcript.")
     a.add_argument("--company", default="", help="Company hint.")
     a.add_argument("--quarter", default="", help="Quarter hint (e.g. 'Q3 2025').")
     a.add_argument("--out", default=None, help="Output path (default reports/<slug>.report.md).")
     a.set_defaults(func=cmd_analyze)
+
+    c = sub.add_parser("convert", help="Convert a .pdf/.docx/.pptx/.txt file to markdown.")
+    c.add_argument("file", help="Path to the file to convert.")
+    c.add_argument("--out", default=None, help="Output path (default: same name, .md).")
+    c.add_argument("--max-chars", type=int, default=17_000,
+                   help="Character budget matching the web UI limit (0 = unlimited).")
+    c.set_defaults(func=cmd_convert)
 
     e = sub.add_parser("eval", help="Run the golden-set evaluation harness.")
     e.add_argument("--golden", default="golden", help="Golden set directory.")

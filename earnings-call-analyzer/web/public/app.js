@@ -28,6 +28,7 @@ Analyst: Any weakness or softness worth flagging in the macro environment?
 Dana Whitfield: Some customers are scrutinizing budgets, but overall demand remains strong and we have not seen a slowdown.`;
 
 const MAX_TRANSCRIPT_CHARS = 17000;
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB upload cap; text is trimmed to 17k chars after extraction
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -222,10 +223,156 @@ els.clear.addEventListener("click", () => {
   els.scorecard.classList.add("hidden"); setStatus("Awaiting a transcript.");
   els.badge.textContent = "backend: ready"; els.badge.className = "badge badge-muted";
 });
+// --- File extraction: .pdf via vendored pdf.js; .docx/.pptx are OOXML zips parsed
+// with DecompressionStream + DOMParser (no dependencies). All parsing happens in the
+// browser; only the extracted text is ever sent to the API.
+
+let pdfjsPromise = null;
+function loadPdfjs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = import("/vendor/pdf.min.mjs").then((m) => {
+      m.GlobalWorkerOptions.workerSrc = "/vendor/pdf.worker.min.mjs";
+      return m;
+    });
+  }
+  return pdfjsPromise;
+}
+
+async function pdfToText(f) {
+  const pdfjs = await loadPdfjs();
+  const task = pdfjs.getDocument({ data: await f.arrayBuffer() });
+  const doc = await task.promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const content = await (await doc.getPage(i)).getTextContent();
+    const lines = [];
+    let line = "", lastY = null;
+    for (const item of content.items) {
+      if (item.str == null) continue;
+      const y = item.transform ? item.transform[5] : lastY;
+      if (lastY !== null && y !== null && Math.abs(y - lastY) > 2 && line) { lines.push(line); line = ""; }
+      line += item.str;
+      if (item.hasEOL && line) { lines.push(line); line = ""; }
+      lastY = y;
+    }
+    if (line) lines.push(line);
+    pages.push(lines.join("\n"));
+  }
+  task.destroy();
+  return pages.join("\n\n");
+}
+
+function unzip(buf) {
+  const view = new DataView(buf);
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 22 - 65535); i--) {
+    if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("not a valid Office file (zip directory missing)");
+  const count = view.getUint16(eocd + 10, true);
+  let off = view.getUint32(eocd + 16, true);
+  const entries = new Map();
+  const decoder = new TextDecoder();
+  for (let n = 0; n < count; n++) {
+    if (view.getUint32(off, true) !== 0x02014b50) break;
+    const method = view.getUint16(off + 10, true);
+    const compSize = view.getUint32(off + 20, true);
+    const nameLen = view.getUint16(off + 28, true);
+    const extraLen = view.getUint16(off + 30, true);
+    const commentLen = view.getUint16(off + 32, true);
+    const localOff = view.getUint32(off + 42, true);
+    const name = decoder.decode(new Uint8Array(buf, off + 46, nameLen));
+    entries.set(name, { method, compSize, localOff });
+    off += 46 + nameLen + extraLen + commentLen;
+  }
+  return { buf, view, entries };
+}
+
+async function zipEntryText(zip, name) {
+  const e = zip.entries.get(name);
+  if (!e) return null;
+  const nameLen = zip.view.getUint16(e.localOff + 26, true);
+  const extraLen = zip.view.getUint16(e.localOff + 28, true);
+  const data = new Uint8Array(zip.buf, e.localOff + 30 + nameLen + extraLen, e.compSize);
+  let bytes = data;
+  if (e.method === 8) {
+    const ds = new DecompressionStream("deflate-raw");
+    bytes = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(ds)).arrayBuffer());
+  } else if (e.method !== 0) {
+    throw new Error("unsupported compression inside the file");
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+function xmlParagraphs(xml, ns) {
+  const doc = new DOMParser().parseFromString(xml, "application/xml");
+  const out = [];
+  for (const p of doc.getElementsByTagNameNS(ns, "p")) {
+    let s = "";
+    for (const t of p.getElementsByTagNameNS(ns, "t")) s += t.textContent;
+    if (s.trim()) out.push(s.trim());
+  }
+  return out.join("\n");
+}
+
+async function docxToText(f) {
+  const zip = unzip(await f.arrayBuffer());
+  const xml = await zipEntryText(zip, "word/document.xml");
+  if (!xml) throw new Error("no document body found in the .docx");
+  return xmlParagraphs(xml, "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+}
+
+async function pptxToText(f) {
+  const zip = unzip(await f.arrayBuffer());
+  const slides = [...zip.entries.keys()]
+    .map((n) => n.match(/^ppt\/slides\/slide(\d+)\.xml$/))
+    .filter(Boolean)
+    .sort((a, b) => Number(a[1]) - Number(b[1]));
+  if (!slides.length) throw new Error("no slides found in the .pptx");
+  const parts = [];
+  for (const m of slides) {
+    const xml = await zipEntryText(zip, m[0]);
+    const text = xmlParagraphs(xml, "http://schemas.openxmlformats.org/drawingml/2006/main");
+    if (text) parts.push(`## Slide ${m[1]}\n${text}`);
+  }
+  return parts.join("\n\n");
+}
+
+async function extractFileText(f) {
+  const ext = (f.name.match(/\.([^.]+)$/) || [, ""])[1].toLowerCase();
+  if (ext === "doc" || ext === "ppt") {
+    throw new Error(`legacy .${ext} files aren't supported; re-save as .${ext}x and retry`);
+  }
+  if (ext === "pdf") return pdfToText(f);
+  if (ext === "docx") return docxToText(f);
+  if (ext === "pptx") return pptxToText(f);
+  if (ext === "txt" || ext === "md" || f.type.startsWith("text/")) return f.text();
+  throw new Error("unsupported file type; upload .txt, .md, .pdf, .docx, or .pptx");
+}
+
 els.file.addEventListener("change", async (e) => {
   const f = e.target.files && e.target.files[0];
+  e.target.value = ""; // allow picking the same file again
   if (!f) return;
-  const text = await f.text();
+  if (f.size > MAX_FILE_BYTES) {
+    els.hint.textContent = `${f.name} is ${(f.size / 1048576).toFixed(1)} MB; the upload limit is ${MAX_FILE_BYTES / 1048576} MB.`;
+    els.hint.className = "hint error";
+    return;
+  }
+  els.hint.textContent = `Reading ${f.name}…`; els.hint.className = "hint";
+  let text;
+  try {
+    text = (await extractFileText(f)).replace(/\r\n/g, "\n").trim();
+  } catch (err) {
+    els.hint.textContent = `Could not read ${f.name}: ${err.message}.`;
+    els.hint.className = "hint error";
+    return;
+  }
+  if (!text) {
+    els.hint.textContent = `No text found in ${f.name}. Scanned or image-only files need OCR first.`;
+    els.hint.className = "hint error";
+    return;
+  }
   els.transcript.value = text.slice(0, MAX_TRANSCRIPT_CHARS);
   updateCharCount();
   lastName = f.name.replace(/\.[^.]+$/, "");

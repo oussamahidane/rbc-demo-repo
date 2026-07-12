@@ -14,7 +14,7 @@ interface Env {
   RATE_LIMIT_KV?: KVNamespace;
 }
 
-const MAX_CHARS = 200_000; // ~40k tokens; protects cost and latency
+const MAX_CHARS = 17_000; // mirrors the UI transcript limit; enforced server-side so it can't be bypassed
 
 // Opus pricing: $0.015/1K input tokens, $0.06/1K output tokens
 const OPUS_INPUT_COST_PER_1K = 0.015;

@@ -34,32 +34,14 @@ _IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
 _EXHIBIT_RE = re.compile(r"\b(exhibit|figure|chart|table|appendix)\s+[A-Z0-9]", re.IGNORECASE)
 
 
-def _read_text(path: Path) -> str:
-    suffix = path.suffix.lower()
-    if suffix == ".pdf":
-        return _read_pdf(path)
-    return path.read_text(encoding="utf-8", errors="replace")
-
-
-def _read_pdf(path: Path) -> str:
-    try:
-        from pypdf import PdfReader
-    except ModuleNotFoundError as exc:  # pragma: no cover - depends on optional dep
-        raise RuntimeError(
-            "PDF ingest needs pypdf. Install it (`pip install pypdf`) or convert the "
-            "transcript to .txt/.md first."
-        ) from exc
-    reader = PdfReader(str(path))
-    return "\n".join(page.extract_text() or "" for page in reader.pages)
-
-
 def ingest(path: str | Path) -> Transcript:
-    """Load a .txt/.md/.pdf transcript and normalize it into a Transcript."""
+    """Load a .txt/.md/.pdf/.docx/.pptx transcript and normalize it into a Transcript."""
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"Transcript not found: {path}")
 
-    raw = _read_text(path)
+    from .convert import convert_to_markdown
+    raw = convert_to_markdown(path)
     lines: list[str] = []
     exhibits: list[str] = []
 
