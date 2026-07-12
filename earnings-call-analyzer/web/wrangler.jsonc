@@ -10,6 +10,8 @@
   //   npx wrangler pages secret put APP_PASSWORD
   // For local dev, put them in .dev.vars (gitignored). See README-web.md.
   "vars": {
-    "ECA_MODEL": "claude-sonnet-5"
+    "ECA_MODEL": "claude-opus-4-8",
+    "RATE_LIMIT_BUDGET": "5.0",
+    "RATE_LIMIT_WINDOW_DAYS": "7"
   }
 }
