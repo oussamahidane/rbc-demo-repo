@@ -5,6 +5,11 @@
   "compatibility_date": "2025-01-01",
   "pages_build_output_dir": "public",
 
+  // KV Namespace for rate limiting (tracks $5/week per IP)
+  "kv_namespaces": [
+    { "binding": "RATE_LIMIT_KV", "id": "e4cbe262057148af80f5893dc92e125f" }
+  ],
+
   // Non-secret vars only. Secrets (ANTHROPIC_API_KEY, APP_PASSWORD) are set out-of-band:
   //   npx wrangler pages secret put ANTHROPIC_API_KEY
   //   npx wrangler pages secret put APP_PASSWORD
