@@ -1,0 +1,4 @@
+# Copy to `.dev.vars` for local `wrangler pages dev`. NEVER commit the real file.
+# Leave ANTHROPIC_API_KEY unset to exercise the deterministic sample backend offline.
+# ANTHROPIC_API_KEY="sk-ant-..."
+# APP_PASSWORD="choose-a-demo-password"

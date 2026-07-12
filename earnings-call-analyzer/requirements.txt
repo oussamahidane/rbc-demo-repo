@@ -1,0 +1,4 @@
+# Core tool runs on the Python standard library alone (mock mode needs nothing here).
+# These are only required for real Claude analysis and PDF ingest.
+anthropic>=0.40.0   # real analysis mode (set ANTHROPIC_API_KEY); mock mode does not need it
+pypdf>=4.0.0        # PDF transcript ingest; .txt/.md ingest needs nothing

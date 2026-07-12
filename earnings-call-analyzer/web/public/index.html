@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'" />
+  <title>Earnings-Call Analyzer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>📊</text></svg>" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">▮▮</span>
+        <div>
+          <h1>Earnings-Call Analyzer</h1>
+          <p class="tagline">Grounded, self-citing analysis with an evaluation-first design</p>
+        </div>
+      </div>
+      <span id="backend-badge" class="badge badge-muted" title="Which analysis backend served this result">backend: ready</span>
+    </div>
+  </header>
+
+  <div class="banner" role="note">
+    <strong>Demo environment.</strong> Do not paste confidential, client, or material non-public
+    information. Transcript text is sent to the analysis model and is not stored.
+  </div>
+
+  <main class="wrap layout">
+    <section class="panel input-panel">
+      <h2>Transcript</h2>
+      <div class="controls">
+        <label class="field">
+          <span>Company <em>(optional)</em></span>
+          <input id="company" type="text" placeholder="e.g. Northwind Technologies" autocomplete="off" />
+        </label>
+        <label class="field">
+          <span>Quarter <em>(optional)</em></span>
+          <input id="quarter" type="text" placeholder="e.g. Q3 2025" autocomplete="off" />
+        </label>
+      </div>
+      <textarea id="transcript" spellcheck="false"
+        placeholder="Paste an earnings-call transcript here, or load the sample."></textarea>
+      <div class="row">
+        <div class="left">
+          <button id="load-sample" type="button" class="btn btn-ghost">Load sample</button>
+          <label for="file" class="btn btn-ghost">Upload .txt/.md</label>
+          <input id="file" type="file" accept=".txt,.md,text/plain" hidden />
+          <button id="clear" type="button" class="btn btn-ghost">Clear</button>
+        </div>
+        <button id="analyze" type="button" class="btn btn-primary">Analyze</button>
+      </div>
+      <p id="input-hint" class="hint"></p>
+    </section>
+
+    <section class="panel output-panel">
+      <div class="output-head">
+        <h2>Report</h2>
+        <div id="scorecard" class="scorecard hidden">
+          <span class="stat"><span class="stat-label">Grounding</span><span id="s-grounding" class="stat-value">-</span></span>
+          <span class="stat"><span class="stat-label">Numeric</span><span id="s-numeric" class="stat-value">-</span></span>
+          <span class="stat"><span class="stat-label">Claims</span><span id="s-claims" class="stat-value">-</span></span>
+          <button id="download" type="button" class="btn btn-ghost btn-sm" disabled>Download .md</button>
+        </div>
+      </div>
+      <div id="status" class="status">Awaiting a transcript.</div>
+      <article id="report" class="report hidden" aria-live="polite"></article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Independent demonstration built by Oussama Hidane. Not affiliated with, or endorsed by, RBC.</p>
+      <p class="fine">In production this would run on approved infrastructure with data governance and
+        model-risk review. The personal API key is demo-only.</p>
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

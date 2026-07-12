@@ -1,0 +1,13 @@
+{
+  "company": "Atlas Materials Corporation",
+  "quarter": "Q2 2025",
+  "tone_expectation": "net negative",
+  "min_grounding_coverage": 0.95,
+  "expected_metrics": [
+    { "metric": "Revenue", "value_contains": "2.8 billion" },
+    { "metric": "EPS", "value_contains": "0.82" },
+    { "metric": "Operating margin", "value_contains": "11%" },
+    { "metric": "Net income", "value_contains": "410 million" },
+    { "metric": "Free cash flow", "value_contains": "180 million" }
+  ]
+}

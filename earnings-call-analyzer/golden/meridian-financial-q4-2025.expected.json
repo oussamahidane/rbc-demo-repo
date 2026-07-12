@@ -1,0 +1,13 @@
+{
+  "company": "Meridian Financial Group, Inc.",
+  "quarter": "Q4 2025",
+  "tone_expectation": "net positive",
+  "min_grounding_coverage": 0.95,
+  "expected_metrics": [
+    { "metric": "Revenue", "value_contains": "6.1 billion" },
+    { "metric": "EPS", "value_contains": "2.45" },
+    { "metric": "Net income", "value_contains": "2.0 billion" },
+    { "metric": "Buyback / dividend", "value_contains": "1.10" },
+    { "metric": "Guidance", "value_contains": "15%" }
+  ]
+}

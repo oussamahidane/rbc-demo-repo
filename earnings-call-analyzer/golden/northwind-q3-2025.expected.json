@@ -1,0 +1,13 @@
+{
+  "company": "Northwind Technologies, Inc.",
+  "quarter": "Q3 2025",
+  "tone_expectation": "net positive",
+  "min_grounding_coverage": 0.95,
+  "expected_metrics": [
+    { "metric": "Revenue", "value_contains": "4.2 billion" },
+    { "metric": "EPS", "value_contains": "1.20" },
+    { "metric": "Operating margin", "value_contains": "32%" },
+    { "metric": "Net income", "value_contains": "980 million" },
+    { "metric": "Free cash flow", "value_contains": "1.1 billion" }
+  ]
+}

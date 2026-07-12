@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+# Generated reports are ignored except the committed samples.
+reports/*.report.md
+!reports/northwind-q3-2025.report.md
+!reports/atlas-materials-q2-2025.report.md
+!reports/meridian-financial-q4-2025.report.md
