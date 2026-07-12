@@ -91,3 +91,10 @@ Confirm grounding coverage is 100% and numeric verification is 100% on the golde
   model for production. The architecture doesn't change — only the tone stage gets better.
 - To point it at a real transcript, drop a `.txt`/`.md`/`.pdf` in and run
   `python -m eca analyze <file> --company "…" --quarter "…"` with `ANTHROPIC_API_KEY` set.
+
+## Bonus: Web UI
+
+A Cloudflare Pages + Functions web interface is also included in `earnings-call-analyzer/web/`.
+Same pipeline, ported to TypeScript, with password gate and per-IP cost tracking. Deploy it via
+git to Cloudflare Pages (see `web/README-web.md` for instructions). The Python CLI remains
+the reference implementation and evaluation harness.
