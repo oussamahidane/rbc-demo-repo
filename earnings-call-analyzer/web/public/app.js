@@ -27,11 +27,13 @@ Dana Whitfield: Yes, we see a long runway. Adoption is still early and the pipel
 Analyst: Any weakness or softness worth flagging in the macro environment?
 Dana Whitfield: Some customers are scrutinizing budgets, but overall demand remains strong and we have not seen a slowdown.`;
 
+const MAX_TRANSCRIPT_CHARS = 17000;
+
 const $ = (id) => document.getElementById(id);
 const els = {
   company: $("company"), quarter: $("quarter"), transcript: $("transcript"),
   analyze: $("analyze"), loadSample: $("load-sample"), file: $("file"), clear: $("clear"),
-  status: $("status"), report: $("report"), hint: $("input-hint"),
+  status: $("status"), report: $("report"), hint: $("input-hint"), charCount: $("char-count"),
   scorecard: $("scorecard"), sGround: $("s-grounding"), sNum: $("s-numeric"), sClaims: $("s-claims"),
   download: $("download"), badge: $("backend-badge"),
 };
@@ -164,6 +166,11 @@ function updateScorecard(data) {
 async function runAnalyze() {
   const transcript = els.transcript.value.trim();
   if (!transcript) { els.hint.textContent = "Paste a transcript or load the sample first."; els.hint.className = "hint error"; return; }
+  if (transcript.length > MAX_TRANSCRIPT_CHARS) {
+    els.hint.textContent = `Transcript is ${transcript.length.toLocaleString()} characters; max is ${MAX_TRANSCRIPT_CHARS.toLocaleString()}. Trim it and try again.`;
+    els.hint.className = "hint error";
+    return;
+  }
   els.hint.textContent = ""; els.hint.className = "hint";
   els.analyze.disabled = true; els.analyze.textContent = "Analyzing…";
   setStatus("Analyzing transcript…", "loading");
@@ -207,17 +214,36 @@ els.analyze.addEventListener("click", runAnalyze);
 els.loadSample.addEventListener("click", () => {
   els.transcript.value = SAMPLE; els.company.value = "Northwind Technologies"; els.quarter.value = "Q3 2025";
   els.hint.textContent = "Sample loaded. Click Analyze."; els.hint.className = "hint";
+  updateCharCount();
 });
 els.clear.addEventListener("click", () => {
   els.transcript.value = ""; els.company.value = ""; els.quarter.value = "";
+  updateCharCount();
   els.scorecard.classList.add("hidden"); setStatus("Awaiting a transcript.");
   els.badge.textContent = "backend: ready"; els.badge.className = "badge badge-muted";
 });
 els.file.addEventListener("change", async (e) => {
   const f = e.target.files && e.target.files[0];
   if (!f) return;
-  els.transcript.value = await f.text();
+  const text = await f.text();
+  els.transcript.value = text.slice(0, MAX_TRANSCRIPT_CHARS);
+  updateCharCount();
   lastName = f.name.replace(/\.[^.]+$/, "");
-  els.hint.textContent = `Loaded ${f.name}. Click Analyze.`; els.hint.className = "hint";
+  if (text.length > MAX_TRANSCRIPT_CHARS) {
+    els.hint.textContent = `Loaded ${f.name}, trimmed to the first ${MAX_TRANSCRIPT_CHARS.toLocaleString()} characters (file had ${text.length.toLocaleString()}). Click Analyze.`;
+    els.hint.className = "hint error";
+  } else {
+    els.hint.textContent = `Loaded ${f.name}. Click Analyze.`; els.hint.className = "hint";
+  }
 });
+function updateCharCount() {
+  const len = els.transcript.value.length;
+  const atLimit = len >= MAX_TRANSCRIPT_CHARS;
+  els.charCount.textContent =
+    `${len.toLocaleString()} / ${MAX_TRANSCRIPT_CHARS.toLocaleString()} characters` +
+    (atLimit ? " — limit reached, longer pastes are cut off" : "");
+  els.charCount.className = "char-count" + (atLimit ? " error" : "");
+}
+els.transcript.addEventListener("input", updateCharCount);
+updateCharCount();
 els.download.addEventListener("click", download);

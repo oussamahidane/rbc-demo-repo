@@ -48,8 +48,9 @@
           <input id="quarter" type="text" placeholder="e.g. Q3 2025" autocomplete="off" />
         </label>
       </div>
-      <textarea id="transcript" spellcheck="false"
-        placeholder="Paste an earnings-call transcript here, or load the sample."></textarea>
+      <textarea id="transcript" spellcheck="false" maxlength="17000"
+        placeholder="Paste an earnings-call transcript here (max 17,000 characters), or load the sample."></textarea>
+      <div id="char-count" class="char-count">0 / 17,000 characters</div>
       <div class="row">
         <div class="left">
           <button id="load-sample" type="button" class="btn btn-ghost">Load sample</button>
