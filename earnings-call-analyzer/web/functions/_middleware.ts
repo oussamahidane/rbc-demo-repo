@@ -6,6 +6,7 @@ interface Env {
   APP_PASSWORD?: string;
   RATE_LIMIT_BUDGET?: string;
   RATE_LIMIT_WINDOW_DAYS?: string;
+  RATE_LIMIT_KV?: KVNamespace;
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -15,21 +16,39 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-// Estimate cost per request (Opus ~$0.015/1K input + $0.06/1K output).
-// Rough estimate: avg 2K input + 1K output ≈ $0.12/request. Conservative: $0.10/request.
-const COST_PER_REQUEST = 0.10;
+function getWeekKey(): string {
+  const now = new Date();
+  const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+  return weekStart.toISOString().split('T')[0]; // YYYY-MM-DD of week start
+}
 
-async function checkRateLimit(ip: string, budget: number, windowDays: number): Promise<boolean> {
-  // NOTE: True cost tracking requires Cloudflare KV or Durable Objects.
-  // For now, this is a placeholder. To enable real tracking:
-  // 1. Enable KV in wrangler.jsonc: "kv_namespaces": [{ "binding": "RATE_LIMIT_KV", "id": "..." }]
-  // 2. Store IP+timestamp+cost in KV, keyed by "ratelimit:<ip>:<week>"
-  // 3. Query and sum the weekly total
-  // For demo, we allow all requests but log a warning if real KV is not bound.
-  return true; // TODO: implement with KV when enabled
+async function checkRateLimit(ip: string, kv: KVNamespace, budgetDollars: number): Promise<{ allowed: boolean; remaining: number }> {
+  const weekKey = getWeekKey();
+  const kvKey = `ratelimit:${ip}:${weekKey}`;
+
+  const storedStr = await kv.get(kvKey);
+  const currentSpend = storedStr ? parseFloat(storedStr) : 0;
+  const remaining = Math.max(0, budgetDollars - currentSpend);
+
+  return { allowed: remaining > 0, remaining };
 }
 
 export const onRequest: PagesFunction<Env> = async (ctx) => {
+  const ip = ctx.request.headers.get("CF-Connecting-IP") || "unknown";
+
+  // Rate limit check (if KV is bound)
+  if (ctx.env.RATE_LIMIT_KV) {
+    const budget = parseFloat(ctx.env.RATE_LIMIT_BUDGET || "5.0");
+    const { allowed } = await checkRateLimit(ip, ctx.env.RATE_LIMIT_KV, budget);
+    if (!allowed) {
+      return new Response("Rate limit exceeded ($5/week per IP). Try again next week.", {
+        status: 429,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+  }
+
+  // Password gate
   const expected = ctx.env.APP_PASSWORD;
   if (!expected) return ctx.next(); // gate disabled when no password configured (dev)
 
